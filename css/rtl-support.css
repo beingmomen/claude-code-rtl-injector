@@ -1,0 +1,122 @@
+/* === RTL / Arabic Support === */
+
+/* User messages */
+.userMessage_07S1Yg,
+.userMessage_07S1Yg * {
+  unicode-bidi: plaintext;
+  text-align: start;
+}
+
+/* Assistant markdown responses */
+.root_-a7MRw,
+.root_-a7MRw *,
+.root_-a7MRw p,
+.root_-a7MRw li,
+.root_-a7MRw td,
+.root_-a7MRw th,
+.root_-a7MRw blockquote,
+.root_-a7MRw h1,
+.root_-a7MRw h2,
+.root_-a7MRw h3,
+.root_-a7MRw h4,
+.root_-a7MRw h5,
+.root_-a7MRw h6 {
+  unicode-bidi: plaintext;
+  text-align: start;
+}
+
+/* Chat input field */
+.messageInput_cKsPxg,
+.messageInput_cKsPxg * {
+  unicode-bidi: plaintext;
+  text-align: start;
+}
+
+/* Input placeholder */
+.messageInput_cKsPxg:empty:before {
+  unicode-bidi: plaintext;
+}
+
+/* Timeline / tool messages */
+.timelineMessage_07S1Yg,
+.timelineMessage_07S1Yg *,
+.progressContent_07S1Yg,
+.progressContent_07S1Yg * {
+  unicode-bidi: plaintext;
+  text-align: start;
+}
+
+/* Permission request text */
+.permissionRequestContent_qlaBag,
+.permissionRequestContent_qlaBag *,
+.permissionRequestDescription_qlaBag,
+.permissionRequestDescription_qlaBag *,
+.permissionRequestHeader_qlaBag,
+.permissionRequestHeader_qlaBag * {
+  unicode-bidi: plaintext;
+  text-align: start;
+}
+
+/* Todo list items */
+.content_xheXVQ,
+.content_xheXVQ * {
+  unicode-bidi: plaintext;
+  text-align: start;
+}
+
+/* Slash command result */
+.slashCommandResultMessage_07S1Yg,
+.slashCommandResultMessage_07S1Yg * {
+  unicode-bidi: plaintext;
+  text-align: start;
+}
+
+/* Error / meta messages */
+.errorMessage_07S1Yg,
+.errorMessage_07S1Yg *,
+.metaMessage_07S1Yg,
+.metaMessage_07S1Yg *,
+.interruptedMessage_07S1Yg,
+.interruptedMessage_07S1Yg * {
+  unicode-bidi: plaintext;
+  text-align: start;
+}
+
+/* Question/answer UI */
+.questionText_hONcXw,
+.questionText_hONcXw *,
+.answerText_hONcXw,
+.answerText_hONcXw *,
+.questionTextLarge_hONcXw,
+.questionTextLarge_hONcXw *,
+.optionLabel_hONcXw,
+.optionLabel_hONcXw *,
+.optionDescription_hONcXw,
+.optionDescription_hONcXw * {
+  unicode-bidi: plaintext;
+  text-align: start;
+}
+
+/* Session names (list + header) */
+.sessionName_OOQiHg,
+.sessionName_OOQiHg *,
+.sessionName_AsP4Bg,
+.sessionName_AsP4Bg *,
+.sessionsButtonText_aqhumA,
+.sessionsButtonText_aqhumA *,
+.sessionsButtonContent_aqhumA,
+.sessionsButtonContent_aqhumA * {
+  unicode-bidi: plaintext;
+  text-align: start;
+}
+
+/* Keep code blocks always LTR */
+.root_-a7MRw pre,
+.root_-a7MRw code,
+.bashCommand_F2hEIg,
+.toolBodyRowContent_ZUQaOA pre,
+.toolBodyRowContent_ZUQaOA code {
+  direction: ltr !important;
+  unicode-bidi: isolate;
+  text-align: left;
+}
