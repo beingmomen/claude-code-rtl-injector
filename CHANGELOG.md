@@ -2,13 +2,15 @@
 
 All notable changes to the "Claude Code RTL Support" extension will be documented in this file.
 
-## [0.2.0] - 2026-03-28
+## [0.3.0] - 2026-03-28
 
 ### Fixed
+- **Auto-inject not updating on RTL extension upgrade**: The extension now tracks its own version and re-injects CSS when the RTL extension is updated, not only when Claude Code version changes (fixes #1)
 - **Input caret desync**: Arabic typing now has synchronized caret and text direction in chat input field (fixes #1)
 - **User message bubble alignment**: Sent Arabic messages now render as proper RTL inside the user message bubble (fixes #1)
 
 ### Added
+- RTL extension version tracking via `globalState` to trigger re-injection on extension updates
 - `direction: rtl` on `.messageInput` container for correct caret positioning
 - `direction: rtl` on `.userMessage` container for proper bubble alignment
 - LTR protection for code blocks inside user messages (`pre`, `code`)

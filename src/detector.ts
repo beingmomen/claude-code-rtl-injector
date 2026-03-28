@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs';
-import { CLAUDE_EXTENSION_ID, WEBVIEW_CSS_PATH, CLASS_NAME_BASES, STATE_KEY_VERSION } from './constants';
+import { CLAUDE_EXTENSION_ID, WEBVIEW_CSS_PATH, CLASS_NAME_BASES, STATE_KEY_VERSION, STATE_KEY_RTL_VERSION } from './constants';
 
 export interface ClaudeCodeInfo {
   extensionPath: string;
@@ -48,6 +48,23 @@ export function hasVersionChanged(context: vscode.ExtensionContext, info: Claude
  */
 export async function saveVersion(context: vscode.ExtensionContext, info: ClaudeCodeInfo): Promise<void> {
   await context.globalState.update(STATE_KEY_VERSION, info.version);
+}
+
+/**
+ * Check if RTL extension version has changed since last injection.
+ */
+export function hasRtlVersionChanged(context: vscode.ExtensionContext): boolean {
+  const lastVersion = context.globalState.get<string>(STATE_KEY_RTL_VERSION);
+  const currentVersion = context.extension?.packageJSON?.version ?? 'unknown';
+  return lastVersion !== currentVersion;
+}
+
+/**
+ * Save the current RTL extension version to global state.
+ */
+export async function saveRtlVersion(context: vscode.ExtensionContext): Promise<void> {
+  const currentVersion = context.extension?.packageJSON?.version ?? 'unknown';
+  await context.globalState.update(STATE_KEY_RTL_VERSION, currentVersion);
 }
 
 /**
