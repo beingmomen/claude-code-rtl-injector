@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import * as fs from 'fs';
-import { detectClaudeCode, hasVersionChanged, saveVersion, extractCurrentHashes } from './detector';
+import { detectClaudeCode, hasVersionChanged, saveVersion, extractCurrentHashes, hasRtlVersionChanged, saveRtlVersion } from './detector';
 import { injectRtlCss, removeRtlCss, isAlreadyInjected } from './injector';
 
 export function activate(context: vscode.ExtensionContext) {
@@ -34,9 +34,10 @@ async function autoInject(context: vscode.ExtensionContext): Promise<void> {
   const cssContent = fs.readFileSync(info.cssFilePath, 'utf-8');
   const alreadyInjected = isAlreadyInjected(cssContent);
   const versionChanged = hasVersionChanged(context, info);
+  const rtlVersionChanged = hasRtlVersionChanged(context);
 
-  if (alreadyInjected && !versionChanged) {
-    return; // Already injected and same version, nothing to do
+  if (alreadyInjected && !versionChanged && !rtlVersionChanged) {
+    return; // Already injected and both versions unchanged, nothing to do
   }
 
   const currentHashes = extractCurrentHashes(cssContent);
@@ -44,6 +45,7 @@ async function autoInject(context: vscode.ExtensionContext): Promise<void> {
 
   if (result.success) {
     await saveVersion(context, info);
+    await saveRtlVersion(context);
 
     const reloadAction = 'Reload Now';
     const message = result.unmatchedBases.length > 0
@@ -75,6 +77,7 @@ async function manualInject(context: vscode.ExtensionContext): Promise<void> {
 
   if (result.success) {
     await saveVersion(context, info);
+    await saveRtlVersion(context);
 
     const reloadAction = 'Reload Now';
     const action = await vscode.window.showInformationMessage(

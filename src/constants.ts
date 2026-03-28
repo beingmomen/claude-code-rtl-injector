@@ -6,6 +6,7 @@ export const OLD_MANUAL_MARKER = '/* === RTL / Arabic Support === */';
 
 // Global state keys
 export const STATE_KEY_VERSION = 'claudeCodeRtl.lastInjectedVersion';
+export const STATE_KEY_RTL_VERSION = 'claudeCodeRtl.lastRtlExtensionVersion';
 
 // CSS module class name bases used in the RTL CSS template.
 // The hash suffixes (e.g., _07S1Yg) change between Claude Code versions.
