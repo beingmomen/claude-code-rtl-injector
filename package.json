@@ -2,7 +2,7 @@
   "name": "claude-code-rtl-injector",
   "displayName": "Claude Code RTL Support",
   "description": "Automatically injects RTL/Arabic CSS into Claude Code's webview for proper Arabic text rendering",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "publisher": "beingmomen",
   "license": "MIT",
   "icon": "images/icon.png",
