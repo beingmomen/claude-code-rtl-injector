@@ -1,11 +1,12 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs';
-import { CLAUDE_EXTENSION_ID, WEBVIEW_CSS_PATH, CLASS_NAME_BASES, STATE_KEY_VERSION, STATE_KEY_RTL_VERSION } from './constants';
+import { CLAUDE_EXTENSION_ID, WEBVIEW_CSS_PATH, WEBVIEW_JS_PATH, CLASS_NAME_BASES, STATE_KEY_VERSION, STATE_KEY_RTL_VERSION } from './constants';
 
 export interface ClaudeCodeInfo {
   extensionPath: string;
   cssFilePath: string;
+  jsFilePath: string;
   version: string;
 }
 
@@ -28,9 +29,12 @@ export function detectClaudeCode(): ClaudeCodeInfo | undefined {
     return undefined;
   }
 
+  const jsFilePath = path.join(ext.extensionPath, WEBVIEW_JS_PATH);
+
   return {
     extensionPath: ext.extensionPath,
     cssFilePath,
+    jsFilePath,
     version: ext.packageJSON?.version ?? 'unknown',
   };
 }

@@ -1,6 +1,6 @@
 import * as fs from 'fs';
 import * as path from 'path';
-import { MARKER_START, MARKER_END, OLD_MANUAL_MARKER, CLASS_NAME_BASES } from './constants';
+import { MARKER_START, MARKER_END, JS_MARKER_START, JS_MARKER_END, OLD_MANUAL_MARKER, CLASS_NAME_BASES } from './constants';
 import { HashMap } from './detector';
 
 export interface InjectResult {
@@ -204,5 +204,114 @@ export function removeRtlCss(cssFilePath: string): { success: boolean; message: 
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);
     return { success: false, message: `Failed to remove RTL CSS: ${msg}` };
+  }
+}
+
+// ─── JavaScript Injection ────────────────────────────────────────────
+
+/**
+ * Read the RTL JS observer template bundled with this extension.
+ */
+function readJsTemplate(extensionPath: string): string {
+  const templatePath = path.join(extensionPath, 'js', 'rtl-observer.js');
+  return fs.readFileSync(templatePath, 'utf-8');
+}
+
+/**
+ * Check if RTL JS is already injected.
+ */
+export function isJsAlreadyInjected(jsContent: string): boolean {
+  return jsContent.includes(JS_MARKER_START) && jsContent.includes(JS_MARKER_END);
+}
+
+/**
+ * Remove previously injected RTL JS (between markers).
+ */
+function removeInjectedJsBlock(jsContent: string): string {
+  const startIdx = jsContent.indexOf(JS_MARKER_START);
+  const endIdx = jsContent.indexOf(JS_MARKER_END);
+
+  if (startIdx === -1 || endIdx === -1) {
+    return jsContent;
+  }
+
+  const before = jsContent.substring(0, startIdx).trimEnd();
+  const after = jsContent.substring(endIdx + JS_MARKER_END.length).trimStart();
+
+  return after ? `${before}\n${after}` : before;
+}
+
+/**
+ * Inject RTL JS observer into Claude Code's webview JS file.
+ */
+export function injectRtlJs(
+  jsFilePath: string,
+  extensionPath: string
+): { success: boolean; message: string } {
+  try {
+    if (!fs.existsSync(jsFilePath)) {
+      return { success: false, message: 'Claude Code webview JS file not found.' };
+    }
+
+    // Backup original JS
+    const backupPath = jsFilePath + '.rtl-backup';
+    if (!fs.existsSync(backupPath)) {
+      fs.copyFileSync(jsFilePath, backupPath);
+    }
+
+    // Read current JS
+    let jsContent = fs.readFileSync(jsFilePath, 'utf-8');
+
+    // Remove existing injection if present
+    if (isJsAlreadyInjected(jsContent)) {
+      jsContent = removeInjectedJsBlock(jsContent);
+    }
+
+    // Read JS template
+    const template = readJsTemplate(extensionPath);
+
+    // Build injection block
+    const injectionBlock = [
+      '',
+      JS_MARKER_START,
+      template,
+      JS_MARKER_END,
+    ].join('\n');
+
+    // Append to JS
+    jsContent = jsContent.trimEnd() + '\n' + injectionBlock + '\n';
+
+    // Write back
+    fs.writeFileSync(jsFilePath, jsContent, 'utf-8');
+
+    return { success: true, message: 'RTL JS observer injected successfully.' };
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    return { success: false, message: `Failed to inject RTL JS: ${msg}` };
+  }
+}
+
+/**
+ * Remove injected RTL JS from Claude Code's webview JS file.
+ */
+export function removeRtlJs(jsFilePath: string): { success: boolean; message: string } {
+  try {
+    if (!fs.existsSync(jsFilePath)) {
+      return { success: false, message: 'Claude Code webview JS file not found.' };
+    }
+
+    let jsContent = fs.readFileSync(jsFilePath, 'utf-8');
+
+    if (!isJsAlreadyInjected(jsContent)) {
+      return { success: false, message: 'No injected RTL JS found.' };
+    }
+
+    jsContent = removeInjectedJsBlock(jsContent);
+    fs.writeFileSync(jsFilePath, jsContent + '\n', 'utf-8');
+
+    return { success: true, message: 'RTL JS removed successfully.' };
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    return { success: false, message: `Failed to remove RTL JS: ${msg}` };
   }
 }

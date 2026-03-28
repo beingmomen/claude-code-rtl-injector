@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import * as fs from 'fs';
 import { detectClaudeCode, hasVersionChanged, saveVersion, extractCurrentHashes, hasRtlVersionChanged, saveRtlVersion } from './detector';
-import { injectRtlCss, removeRtlCss, isAlreadyInjected } from './injector';
+import { injectRtlCss, removeRtlCss, isAlreadyInjected, injectRtlJs, removeRtlJs, isJsAlreadyInjected } from './injector';
 
 export function activate(context: vscode.ExtensionContext) {
   // Register commands
@@ -32,32 +32,36 @@ async function autoInject(context: vscode.ExtensionContext): Promise<void> {
   }
 
   const cssContent = fs.readFileSync(info.cssFilePath, 'utf-8');
-  const alreadyInjected = isAlreadyInjected(cssContent);
+  const cssInjected = isAlreadyInjected(cssContent);
+  const jsContent = fs.existsSync(info.jsFilePath) ? fs.readFileSync(info.jsFilePath, 'utf-8') : '';
+  const jsInjected = isJsAlreadyInjected(jsContent);
   const versionChanged = hasVersionChanged(context, info);
   const rtlVersionChanged = hasRtlVersionChanged(context);
 
-  if (alreadyInjected && !versionChanged && !rtlVersionChanged) {
+  if (cssInjected && jsInjected && !versionChanged && !rtlVersionChanged) {
     return; // Already injected and both versions unchanged, nothing to do
   }
 
   const currentHashes = extractCurrentHashes(cssContent);
-  const result = injectRtlCss(info.cssFilePath, context.extensionPath, currentHashes);
+  const cssResult = injectRtlCss(info.cssFilePath, context.extensionPath, currentHashes);
+  const jsResult = injectRtlJs(info.jsFilePath, context.extensionPath);
 
-  if (result.success) {
+  if (cssResult.success) {
     await saveVersion(context, info);
     await saveRtlVersion(context);
 
     const reloadAction = 'Reload Now';
-    const message = result.unmatchedBases.length > 0
-      ? `Claude Code RTL: CSS injected (v${info.version}). ${result.unmatchedBases.length} classes not found - some elements may not be styled. Reload to apply.`
-      : `Claude Code RTL: CSS injected for v${info.version}. Reload to apply.`;
+    const jsStatus = jsResult.success ? ' + JS observer' : '';
+    const message = cssResult.unmatchedBases.length > 0
+      ? `Claude Code RTL: CSS${jsStatus} injected (v${info.version}). ${cssResult.unmatchedBases.length} classes not found. Reload to apply.`
+      : `Claude Code RTL: CSS${jsStatus} injected for v${info.version}. Reload to apply.`;
 
     const action = await vscode.window.showInformationMessage(message, reloadAction);
     if (action === reloadAction) {
       await vscode.commands.executeCommand('workbench.action.reloadWindow');
     }
   } else {
-    vscode.window.showErrorMessage(result.message);
+    vscode.window.showErrorMessage(cssResult.message);
   }
 }
 
@@ -73,22 +77,24 @@ async function manualInject(context: vscode.ExtensionContext): Promise<void> {
 
   const cssContent = fs.readFileSync(info.cssFilePath, 'utf-8');
   const currentHashes = extractCurrentHashes(cssContent);
-  const result = injectRtlCss(info.cssFilePath, context.extensionPath, currentHashes);
+  const cssResult = injectRtlCss(info.cssFilePath, context.extensionPath, currentHashes);
+  const jsResult = injectRtlJs(info.jsFilePath, context.extensionPath);
 
-  if (result.success) {
+  if (cssResult.success) {
     await saveVersion(context, info);
     await saveRtlVersion(context);
 
+    const jsStatus = jsResult.success ? ' + JS observer' : '';
     const reloadAction = 'Reload Now';
     const action = await vscode.window.showInformationMessage(
-      `${result.message} Reload to apply changes.`,
+      `${cssResult.message}${jsStatus} Reload to apply changes.`,
       reloadAction,
     );
     if (action === reloadAction) {
       await vscode.commands.executeCommand('workbench.action.reloadWindow');
     }
   } else {
-    vscode.window.showErrorMessage(result.message);
+    vscode.window.showErrorMessage(cssResult.message);
   }
 }
 
@@ -102,19 +108,20 @@ async function manualRemove(): Promise<void> {
     return;
   }
 
-  const result = removeRtlCss(info.cssFilePath);
+  const cssResult = removeRtlCss(info.cssFilePath);
+  const jsResult = removeRtlJs(info.jsFilePath);
 
-  if (result.success) {
+  if (cssResult.success || jsResult.success) {
     const reloadAction = 'Reload Now';
     const action = await vscode.window.showInformationMessage(
-      `${result.message} Reload to apply changes.`,
+      `RTL CSS and JS removed successfully. Reload to apply changes.`,
       reloadAction,
     );
     if (action === reloadAction) {
       await vscode.commands.executeCommand('workbench.action.reloadWindow');
     }
   } else {
-    vscode.window.showWarningMessage(result.message);
+    vscode.window.showWarningMessage('No injected RTL CSS or JS found.');
   }
 }
 
@@ -129,14 +136,18 @@ function checkStatus(context: vscode.ExtensionContext): void {
   }
 
   const cssContent = fs.readFileSync(info.cssFilePath, 'utf-8');
-  const injected = isAlreadyInjected(cssContent);
+  const cssInjected = isAlreadyInjected(cssContent);
+  const jsContent = fs.existsSync(info.jsFilePath) ? fs.readFileSync(info.jsFilePath, 'utf-8') : '';
+  const jsInjected = isJsAlreadyInjected(jsContent);
   const versionChanged = hasVersionChanged(context, info);
 
-  const status = injected
-    ? `RTL CSS is injected. Claude Code v${info.version}.${versionChanged ? ' (version changed since last injection!)' : ''}`
-    : `RTL CSS is NOT injected. Claude Code v${info.version}.`;
+  const cssStatus = cssInjected ? 'CSS ✓' : 'CSS ✗';
+  const jsStatus = jsInjected ? 'JS ✓' : 'JS ✗';
+  const versionNote = versionChanged ? ' (version changed since last injection!)' : '';
 
-  vscode.window.showInformationMessage(`Claude Code RTL Status: ${status}`);
+  vscode.window.showInformationMessage(
+    `Claude Code RTL Status: ${cssStatus}, ${jsStatus}. Claude Code v${info.version}.${versionNote}`
+  );
 }
 
 export function deactivate() {
