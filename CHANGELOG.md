@@ -2,6 +2,15 @@
 
 All notable changes to the "Claude Code RTL Support" extension will be documented in this file.
 
+## [0.5.0] - 2026-03-28
+
+### Fixed
+- **Input caret desync with Arabic text**: Added `input` event listener that detects text direction on every keystroke and propagates `dir` to the contenteditable, its mirror element (`mentionMirror`), and parent container (fixes #1)
+
+### Changed
+- JS observer now uses explicit `dir="rtl"` / `dir="ltr"` based on first strong character detection instead of relying solely on `dir="auto"` for input fields
+- Direction propagated to `mentionMirror` (visible text overlay) and `messageInputContainer` (parent layout)
+
 ## [0.4.0] - 2026-03-28
 
 ### Fixed
