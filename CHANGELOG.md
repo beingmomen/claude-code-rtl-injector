@@ -2,18 +2,22 @@
 
 All notable changes to the "Claude Code RTL Support" extension will be documented in this file.
 
-## [0.3.0] - 2026-03-28
+## [0.4.0] - 2026-03-28
 
 ### Fixed
-- **Auto-inject not updating on RTL extension upgrade**: The extension now tracks its own version and re-injects CSS when the RTL extension is updated, not only when Claude Code version changes (fixes #1)
-- **Input caret desync**: Arabic typing now has synchronized caret and text direction in chat input field (fixes #1)
-- **User message bubble alignment**: Sent Arabic messages now render as proper RTL inside the user message bubble (fixes #1)
+- **English messages incorrectly RTL**: Replaced CSS-only `direction: rtl` with JavaScript `dir="auto"` injection — browser now auto-detects text direction per message (fixes #1)
+- **Input caret desync**: `dir="auto"` on the contenteditable input field properly syncs caret with Arabic text direction (fixes #1)
+- **Auto-inject not updating on RTL extension upgrade**: Tracks RTL extension version to re-inject when upgraded
 
 ### Added
-- RTL extension version tracking via `globalState` to trigger re-injection on extension updates
-- `direction: rtl` on `.messageInput` container for correct caret positioning
-- `direction: rtl` on `.userMessage` container for proper bubble alignment
-- LTR protection for code blocks inside user messages (`pre`, `code`)
+- **JavaScript injection**: MutationObserver script injected into Claude Code's `webview/index.js` alongside CSS
+- `dir="auto"` automatically applied to `.userMessage` and `.messageInput` elements
+- JS backup system (`index.js.rtl-backup`) mirrors CSS backup approach
+- JS injection status shown in "Check Status" command
+
+### Changed
+- Removed CSS `direction: rtl` from `.userMessage` and `.messageInput` — direction now handled by `dir="auto"` from JS
+- Injection system now manages both CSS and JS files
 
 ## [0.1.0] - 2026-03-23
 
