@@ -1,7 +1,11 @@
 /* === RTL / Arabic Support === */
 
 /* User messages */
-.userMessage_07S1Yg,
+.userMessage_07S1Yg {
+  direction: rtl;
+  unicode-bidi: plaintext;
+  text-align: start;
+}
 .userMessage_07S1Yg * {
   unicode-bidi: plaintext;
   text-align: start;
@@ -26,7 +30,11 @@
 }
 
 /* Chat input field */
-.messageInput_cKsPxg,
+.messageInput_cKsPxg {
+  direction: rtl;
+  unicode-bidi: plaintext;
+  text-align: start;
+}
 .messageInput_cKsPxg * {
   unicode-bidi: plaintext;
   text-align: start;
@@ -113,6 +121,8 @@
 /* Keep code blocks always LTR */
 .root_-a7MRw pre,
 .root_-a7MRw code,
+.userMessage_07S1Yg pre,
+.userMessage_07S1Yg code,
 .bashCommand_F2hEIg,
 .toolBodyRowContent_ZUQaOA pre,
 .toolBodyRowContent_ZUQaOA code {
