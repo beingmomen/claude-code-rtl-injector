@@ -1,93 +1,59 @@
 (function() {
   var MSG_SEL = '[class*="userMessage_"]';
-  var INPUT_SEL = '[class*="messageInput_"]';
+  var INPUT_SEL = '[class*="messageInput_"]:not([class*="messageInputContainer_"])';
   var CONTAINER_SEL = '[class*="messageInputContainer_"]';
   var MIRROR_SEL = '[class*="mentionMirror_"]';
+  var ALL_SEL = MSG_SEL + ', ' + INPUT_SEL + ', ' + CONTAINER_SEL + ', ' + MIRROR_SEL;
 
-  // Detect direction from first strong directional character
-  var RTL_RE = /[\u0591-\u07FF\u200F\u202B\u202E\uFB1D-\uFDFD\uFE70-\uFEFC]/;
-  var LTR_RE = /[A-Za-z\u00C0-\u024F\u1E00-\u1EFF]/;
-
-  function detectDir(text) {
-    for (var i = 0; i < text.length; i++) {
-      if (RTL_RE.test(text[i])) return 'rtl';
-      if (LTR_RE.test(text[i])) return 'ltr';
-    }
-    return null;
-  }
-
-  function setDir(el, dir) {
-    if (el && el.getAttribute('dir') !== dir) {
-      el.setAttribute('dir', dir);
+  function setDirAuto(el) {
+    if (el && !el.getAttribute('dir')) {
+      el.setAttribute('dir', 'auto');
     }
   }
-
-  // Handle input events on the messageInput contenteditable
-  function onInput(e) {
-    var input = e.target;
-    var text = input.textContent || '';
-    var dir = detectDir(text) || 'auto';
-
-    setDir(input, dir);
-
-    // Propagate to sibling mirror and parent container
-    var parent = input.parentElement;
-    if (parent) {
-      var mirror = parent.querySelector(MIRROR_SEL);
-      if (mirror) setDir(mirror, dir);
-      if (parent.matches && parent.matches(CONTAINER_SEL)) {
-        setDir(parent, dir);
-      }
-    }
-  }
-
-  // Track which inputs have listeners attached
-  var tracked = new WeakSet();
 
   function setupInput(el) {
-    if (!tracked.has(el)) {
-      tracked.add(el);
-      el.setAttribute('dir', 'auto');
-      el.addEventListener('input', onInput);
-
-      var parent = el.parentElement;
-      if (parent) {
-        var mirror = parent.querySelector(MIRROR_SEL);
-        if (mirror) mirror.setAttribute('dir', 'auto');
-        if (parent.matches && parent.matches(CONTAINER_SEL)) {
-          parent.setAttribute('dir', 'auto');
-        }
+    setDirAuto(el);
+    // Also set dir="auto" on sibling mirror and parent container
+    var parent = el.parentElement;
+    if (parent) {
+      var mirror = parent.querySelector(MIRROR_SEL);
+      if (mirror) setDirAuto(mirror);
+      if (parent.matches && parent.matches(CONTAINER_SEL)) {
+        setDirAuto(parent);
       }
     }
   }
 
   function applyDirAuto(el) {
     if (el.nodeType === 1) {
-      if (el.matches && el.matches(MSG_SEL) && !el.getAttribute('dir')) {
-        el.setAttribute('dir', 'auto');
+      if (el.matches && el.matches(MSG_SEL)) {
+        setDirAuto(el);
       }
       if (el.matches && el.matches(INPUT_SEL)) {
         setupInput(el);
       }
-      var msgs = el.querySelectorAll(MSG_SEL);
-      for (var i = 0; i < msgs.length; i++) {
-        if (!msgs[i].getAttribute('dir')) msgs[i].setAttribute('dir', 'auto');
+      if (el.matches && el.matches(ALL_SEL)) {
+        setDirAuto(el);
       }
-      var inputs = el.querySelectorAll(INPUT_SEL);
-      for (var i = 0; i < inputs.length; i++) {
-        setupInput(inputs[i]);
+      var children = el.querySelectorAll(ALL_SEL);
+      for (var i = 0; i < children.length; i++) {
+        if (children[i].matches(INPUT_SEL)) {
+          setupInput(children[i]);
+        } else {
+          setDirAuto(children[i]);
+        }
       }
     }
   }
 
   function applyAll() {
-    var msgs = document.querySelectorAll(MSG_SEL);
-    for (var i = 0; i < msgs.length; i++) {
-      if (!msgs[i].getAttribute('dir')) msgs[i].setAttribute('dir', 'auto');
-    }
-    var inputs = document.querySelectorAll(INPUT_SEL);
-    for (var i = 0; i < inputs.length; i++) {
-      setupInput(inputs[i]);
+    var els = document.querySelectorAll(ALL_SEL);
+    for (var i = 0; i < els.length; i++) {
+      if (els[i].matches(INPUT_SEL)) {
+        setupInput(els[i]);
+      } else {
+        setDirAuto(els[i]);
+      }
     }
   }
 

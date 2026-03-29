@@ -25,9 +25,21 @@
   text-align: start;
 }
 
+/* Chat input container */
+.messageInputContainer_cKsPxg {
+  unicode-bidi: plaintext;
+  text-align: start;
+}
+
 /* Chat input field */
 .messageInput_cKsPxg,
 .messageInput_cKsPxg * {
+  unicode-bidi: plaintext;
+  text-align: start;
+}
+
+/* Input mirror (renders visible text behind transparent contenteditable) */
+.mentionMirror_cKsPxg {
   unicode-bidi: plaintext;
   text-align: start;
 }

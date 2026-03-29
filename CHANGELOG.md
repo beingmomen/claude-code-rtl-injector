@@ -2,6 +2,20 @@
 
 All notable changes to the "Claude Code RTL Support" extension will be documented in this file.
 
+## [0.6.0] - 2026-03-29
+
+### Fixed
+- **Per-line direction detection in chat input**: Each line now independently detects its text direction (Arabic RTL, English LTR) even in mixed multi-line input (fixes #1)
+- Root cause: `mentionMirror` (visible text overlay) lacked `unicode-bidi: plaintext` — it's a sibling of `.messageInput`, not a child, so `*` selector didn't reach it
+
+### Added
+- `unicode-bidi: plaintext` CSS rules for `mentionMirror` and `messageInputContainer`
+- `mentionMirror` and `messageInputContainer` added to hash remapping class list
+
+### Changed
+- Removed per-keystroke `dir` override from JS — now relies on CSS `unicode-bidi: plaintext` for per-paragraph direction detection
+- JS observer simplified to only set `dir="auto"` on element creation
+
 ## [0.5.0] - 2026-03-28
 
 ### Fixed

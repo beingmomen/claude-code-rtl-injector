@@ -38,4 +38,6 @@ export const CLASS_NAME_BASES = [
   'sessionsButtonContent',
   'bashCommand',
   'toolBodyRowContent',
+  'mentionMirror',
+  'messageInputContainer',
 ];
