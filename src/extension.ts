@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import * as fs from 'fs';
 import { detectExtensions, hasVersionChanged, saveVersion, extractCurrentHashes, hasRtlVersionChanged, saveRtlVersion, ExtensionInfo } from './detector';
-import { injectRtlCss, removeRtlCss, isAlreadyInjected, injectRtlJs, removeRtlJs, isJsAlreadyInjected, injectRtlShadowDomJs } from './injector';
+import { injectRtlCss, removeRtlCss, isAlreadyInjected, injectRtlJs, removeRtlJs, isJsAlreadyInjected, injectRtlShadowDomJs, injectRtlWorkbenchCss, removeRtlWorkbenchCss } from './injector';
 
 export function activate(context: vscode.ExtensionContext) {
   // Register commands
@@ -32,6 +32,32 @@ async function injectForTarget(
   force: boolean
 ): Promise<{ injected: boolean; displayName: string; unmatchedCount: number }> {
   const mode = info.target.injectionMode ?? 'css';
+
+  // ── Workbench CSS mode (e.g. Copilot Chat — native VS Code chat panel) ──
+  if (mode === 'workbench-css') {
+    if (!info.workbenchCssPath) {
+      return { injected: false, displayName: info.target.displayName, unmatchedCount: 0 };
+    }
+    const cssContent = fs.existsSync(info.workbenchCssPath)
+      ? fs.readFileSync(info.workbenchCssPath, 'utf-8')
+      : '';
+    const alreadyInjected = isAlreadyInjected(cssContent);
+    const versionChanged = hasVersionChanged(context, info);
+    const rtlVersionChanged = hasRtlVersionChanged(context);
+
+    if (!force && alreadyInjected && !versionChanged && !rtlVersionChanged) {
+      return { injected: false, displayName: info.target.displayName, unmatchedCount: 0 };
+    }
+
+    const result = injectRtlWorkbenchCss(info.workbenchCssPath, context.extensionPath, info.target);
+    if (result.success) {
+      await saveVersion(context, info);
+      return { injected: true, displayName: info.target.displayName, unmatchedCount: 0 };
+    } else {
+      vscode.window.showErrorMessage(`${info.target.displayName} RTL: ${result.message}`);
+      return { injected: false, displayName: info.target.displayName, unmatchedCount: 0 };
+    }
+  }
 
   // ── Shadow DOM JS mode (e.g. Copilot Chat) ──────────────────────────
   if (mode === 'shadow-dom-js') {
@@ -180,7 +206,12 @@ async function manualRemove(): Promise<void> {
 
   for (const info of extensions) {
     const mode = info.target.injectionMode ?? 'css';
-    if (mode === 'shadow-dom-js') {
+    if (mode === 'workbench-css') {
+      if (info.workbenchCssPath) {
+        const result = removeRtlWorkbenchCss(info.workbenchCssPath);
+        if (result.success) { anySuccess = true; }
+      }
+    } else if (mode === 'shadow-dom-js') {
       if (info.jsFilePath) {
         const result = removeRtlJs(info.jsFilePath);
         if (result.success) { anySuccess = true; }
@@ -227,7 +258,13 @@ function checkStatus(context: vscode.ExtensionContext): void {
     const versionChanged = hasVersionChanged(context, info);
     const versionNote = versionChanged ? ' ⚠ version changed' : '';
 
-    if (mode === 'shadow-dom-js') {
+    if (mode === 'workbench-css') {
+      const cssContent = info.workbenchCssPath && fs.existsSync(info.workbenchCssPath)
+        ? fs.readFileSync(info.workbenchCssPath, 'utf-8')
+        : '';
+      const cssInjected = isAlreadyInjected(cssContent);
+      lines.push(`${info.target.displayName} v${info.version}: Workbench CSS ${cssInjected ? '✓' : '✗'}${versionNote}`);
+    } else if (mode === 'shadow-dom-js') {
       const jsContent = info.jsFilePath && fs.existsSync(info.jsFilePath)
         ? fs.readFileSync(info.jsFilePath, 'utf-8')
         : '';

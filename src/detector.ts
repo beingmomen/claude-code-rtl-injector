@@ -9,6 +9,8 @@ export interface ExtensionInfo {
   cssFilePath?: string;
   jsFilePath: string;
   version: string;
+  /** Resolved path to VS Code's workbench CSS (only set for workbench-css mode) */
+  workbenchCssPath?: string;
 }
 
 export interface HashMap {
@@ -51,6 +53,15 @@ function discoverCssFile(extPath: string, target: ExtensionTarget): string | und
 }
 
 /**
+ * Resolve the path to VS Code's workbench CSS file.
+ */
+function resolveWorkbenchCssPath(): string | undefined {
+  const appRoot = vscode.env.appRoot; // e.g. /usr/share/code/resources/app
+  const cssPath = path.join(appRoot, 'out', 'vs', 'workbench', 'workbench.desktop.main.css');
+  return fs.existsSync(cssPath) ? cssPath : undefined;
+}
+
+/**
  * Detect all supported AI extensions that are installed.
  * Returns info for each found extension.
  */
@@ -64,6 +75,20 @@ export function detectExtensions(): ExtensionInfo[] {
     }
 
     const mode = target.injectionMode ?? 'css';
+
+    if (mode === 'workbench-css') {
+      const workbenchCssPath = resolveWorkbenchCssPath();
+      if (!workbenchCssPath) { continue; }
+      results.push({
+        target,
+        extensionPath: ext.extensionPath,
+        cssFilePath: undefined,
+        jsFilePath: '',
+        version: ext.packageJSON?.version ?? 'unknown',
+        workbenchCssPath,
+      });
+      continue;
+    }
 
     if (mode === 'shadow-dom-js') {
       if (!target.webviewJsPath) { continue; }

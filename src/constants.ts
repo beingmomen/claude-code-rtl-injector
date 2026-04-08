@@ -43,8 +43,8 @@ export interface ExtensionTarget {
   id: string;
   /** Human-readable name shown in notifications */
   displayName: string;
-  /** Injection strategy: 'css' (default) appends to CSS file; 'shadow-dom-js' injects a JS patch into a webview bundle */
-  injectionMode?: 'css' | 'shadow-dom-js';
+  /** Injection strategy: 'css' (default) appends to CSS file; 'shadow-dom-js' injects a JS patch into a webview bundle; 'workbench-css' appends to VS Code's workbench CSS */
+  injectionMode?: 'css' | 'shadow-dom-js' | 'workbench-css';
   /** Path to webview CSS relative to extensionPath. Supports glob (e.g. 'assets/index-*.css') when webviewCssIsGlob=true. Not required for shadow-dom-js mode. */
   webviewCssPath?: string;
   /** When true, webviewCssPath is treated as a glob pattern and the first match is used */
@@ -77,9 +77,8 @@ export const TARGET_EXTENSIONS: ExtensionTarget[] = [
   {
     id: 'github.copilot-chat',
     displayName: 'Copilot Chat',
-    injectionMode: 'shadow-dom-js',
-    webviewJsPath: 'dist/suggestionsPanelWebview.js',
+    injectionMode: 'workbench-css',
     classNameBases: [],
-    cssTplFile: '',
+    cssTplFile: 'rtl-copilot-chat.css',
   },
 ];

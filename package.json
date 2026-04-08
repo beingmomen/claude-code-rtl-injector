@@ -2,7 +2,7 @@
   "name": "ai-extensions-rtl-support",
   "displayName": "AI Extensions RTL Support",
   "description": "Automatically injects RTL/Arabic CSS into AI extension webviews (Claude Code, Codex, Copilot Chat) for proper Arabic text rendering",
-  "version": "0.7.0",
+  "version": "0.8.0",
   "publisher": "beingmomen",
   "license": "MIT",
   "icon": "images/icon.png",

@@ -1,0 +1,95 @@
+/* ===================================================================
+ * RTL / Arabic Support — VS Code Native Chat Panel (Copilot Chat)
+ * Injected into: workbench.desktop.main.css
+ * ===================================================================
+ */
+
+/* ── Global text direction for chat widgets ─────────────────────── */
+.interactive-session,
+.interactive-list,
+.interactive-item-container,
+.interactive-request,
+.interactive-response,
+.chat-widget {
+  unicode-bidi: plaintext !important;
+}
+
+/* ── Chat message content ────────────────────────────────────────── */
+.interactive-item-container .rendered-markdown,
+.interactive-item-container .rendered-markdown p,
+.interactive-item-container .rendered-markdown li,
+.interactive-item-container .rendered-markdown td,
+.interactive-item-container .rendered-markdown th,
+.interactive-item-container .rendered-markdown blockquote,
+.interactive-item-container .rendered-markdown h1,
+.interactive-item-container .rendered-markdown h2,
+.interactive-item-container .rendered-markdown h3,
+.interactive-item-container .rendered-markdown h4,
+.interactive-item-container .rendered-markdown h5,
+.interactive-item-container .rendered-markdown h6 {
+  unicode-bidi: plaintext !important;
+  direction: auto !important;
+  text-align: start !important;
+}
+
+/* ── Chat input area ─────────────────────────────────────────────── */
+.interactive-input-editor,
+.interactive-input-part,
+.chat-input-container,
+.chat-edit-input-container {
+  unicode-bidi: plaintext !important;
+  direction: auto !important;
+}
+
+/* ── Chat thinking / explanation text ────────────────────────────── */
+.chat-thinking-text,
+.chat-explanation-text,
+.chat-explanation-body,
+.chat-collapsible-markdown-content {
+  unicode-bidi: plaintext !important;
+  direction: auto !important;
+  text-align: start !important;
+}
+
+/* ── Chat follow-ups and questions ───────────────────────────────── */
+.interactive-followup-reply,
+.interactive-session-followups,
+.chat-question-carousel-message,
+.chat-question-freeform-textarea,
+.chat-confirmation-widget-message {
+  unicode-bidi: plaintext !important;
+  direction: auto !important;
+  text-align: start !important;
+}
+
+/* ── Chat status and error messages ──────────────────────────────── */
+.chat-status-message,
+.chat-quota-error-message,
+.chat-rate-limited-message,
+.interactive-response-error-details,
+.chat-tool-approval-message,
+.chat-hook-message,
+.chat-mcp-servers-message,
+.chat-terminal-content-message {
+  unicode-bidi: plaintext !important;
+  direction: auto !important;
+  text-align: start !important;
+}
+
+/* ── Welcome view ────────────────────────────────────────────────── */
+.chat-welcome-view-message,
+.chat-welcome-view-title,
+.chat-welcome-view-disclaimer,
+.chat-welcome-view-suggested-prompt-title {
+  unicode-bidi: plaintext !important;
+  direction: auto !important;
+  text-align: start !important;
+}
+
+/* ── Chat used context and attachments ───────────────────────────── */
+.chat-used-context-label,
+.chat-attached-context-custom-text,
+.chat-element-hover-text {
+  unicode-bidi: plaintext !important;
+  direction: auto !important;
+}

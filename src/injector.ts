@@ -385,3 +385,82 @@ export function injectRtlShadowDomJs(
     return { success: false, message: `Failed to inject Shadow DOM JS: ${msg}` };
   }
 }
+
+// ─── Workbench CSS Injection (VS Code native chat panel) ──────────
+
+/**
+ * Inject RTL CSS into VS Code's workbench CSS file.
+ * Used for extensions whose UI is rendered by VS Code's native chat (e.g. Copilot Chat).
+ */
+export function injectRtlWorkbenchCss(
+  workbenchCssPath: string,
+  extensionPath: string,
+  target: ExtensionTarget
+): { success: boolean; message: string } {
+  try {
+    if (!fs.existsSync(workbenchCssPath)) {
+      return { success: false, message: 'VS Code workbench CSS file not found.' };
+    }
+
+    const backupPath = workbenchCssPath + '.rtl-backup';
+    if (!fs.existsSync(backupPath)) {
+      fs.copyFileSync(workbenchCssPath, backupPath);
+    }
+
+    let cssContent = fs.readFileSync(workbenchCssPath, 'utf-8');
+
+    if (isAlreadyInjected(cssContent)) {
+      cssContent = removeInjectedBlock(cssContent);
+    }
+
+    const template = readRtlTemplate(extensionPath, target.cssTplFile);
+
+    const injectionBlock = [
+      '',
+      '',
+      MARKER_START,
+      `/* Injected by AI Extensions RTL Support (target: ${target.displayName}) */`,
+      `/* Do not edit manually - this block is managed automatically */`,
+      '',
+      template,
+      '',
+      MARKER_END,
+    ].join('\n');
+
+    cssContent = cssContent.trimEnd() + injectionBlock + '\n';
+    fs.writeFileSync(workbenchCssPath, cssContent, 'utf-8');
+
+    return { success: true, message: 'RTL CSS injected into VS Code workbench successfully.' };
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    if (msg.includes('EACCES') || msg.includes('permission denied')) {
+      return { success: false, message: `Permission denied. Try running VS Code with elevated permissions, or run: sudo chmod 666 "${workbenchCssPath}"` };
+    }
+    return { success: false, message: `Failed to inject workbench CSS: ${msg}` };
+  }
+}
+
+/**
+ * Remove injected RTL CSS from VS Code's workbench CSS file.
+ */
+export function removeRtlWorkbenchCss(workbenchCssPath: string): { success: boolean; message: string } {
+  try {
+    if (!fs.existsSync(workbenchCssPath)) {
+      return { success: false, message: 'VS Code workbench CSS file not found.' };
+    }
+
+    let cssContent = fs.readFileSync(workbenchCssPath, 'utf-8');
+
+    if (!isAlreadyInjected(cssContent)) {
+      return { success: false, message: 'No injected RTL CSS found in workbench.' };
+    }
+
+    cssContent = removeInjectedBlock(cssContent);
+    fs.writeFileSync(workbenchCssPath, cssContent + '\n', 'utf-8');
+
+    return { success: true, message: 'RTL CSS removed from VS Code workbench.' };
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    return { success: false, message: `Failed to remove workbench CSS: ${msg}` };
+  }
+}

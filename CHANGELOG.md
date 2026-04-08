@@ -2,6 +2,25 @@
 
 All notable changes to the "Claude Code RTL Support" extension will be documented in this file.
 
+## [0.8.0] - 2026-04-08
+
+### Fixed
+- **Copilot Chat RTL now actually works**: Previous Shadow DOM JS approach targeted `suggestionsPanelWebview.js` which only powers inline code suggestions, NOT the chat panel
+- Copilot Chat's CHAT panel uses VS Code's **native Chat Provider API** — its UI is rendered by VS Code's workbench, not a custom webview
+
+### Changed
+- New `injectionMode: 'workbench-css'` strategy: injects RTL CSS directly into VS Code's `workbench.desktop.main.css`
+- Created `css/rtl-copilot-chat.css` — RTL template targeting native chat classes (`.interactive-session`, `.interactive-item-container`, `.rendered-markdown`, etc.)
+- Updated `detector.ts` — added `resolveWorkbenchCssPath()` using `vscode.env.appRoot` for cross-platform path resolution
+- Updated `injector.ts` — added `injectRtlWorkbenchCss()` and `removeRtlWorkbenchCss()` functions
+- Updated `extension.ts` — workbench-css branch in `injectForTarget()`, `manualRemove()`, and `checkStatus()`
+- Added `workbenchCssPath` to `ExtensionInfo` interface
+
+### Notes
+- Writing to VS Code's workbench files requires write permissions on the installation directory
+- VS Code may show an "[Unsupported]" warning after workbench modification — this is expected and harmless
+- VS Code updates will overwrite the workbench file — the extension re-injects automatically on startup
+
 ## [0.7.0] - 2026-04-08
 
 ### Added
