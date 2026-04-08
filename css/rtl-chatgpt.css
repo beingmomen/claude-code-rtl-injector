@@ -1,0 +1,48 @@
+/* === RTL / Arabic Support for OpenAI ChatGPT (Codex) === */
+/*
+ * Uses attribute selectors (class*=) to match CSS Module classes
+ * regardless of the hash suffix that changes with each Codex release.
+ */
+
+/* ── ProseMirror text editor (input field) ─────────────────────────── */
+.ProseMirror {
+  unicode-bidi: plaintext;
+  text-align: start;
+}
+
+/* ── Markdown content rendered in messages ──────────────────────────── */
+[class*="_markdownContent_"],
+[class*="_markdownRoot_"],
+[class*="_inlineMarkdown_"] {
+  unicode-bidi: plaintext;
+  text-align: start;
+}
+
+/* ── Main shell / home container ─────────────────────────────────────── */
+[class*="_homeShell_"],
+[class*="_home_"] {
+  unicode-bidi: plaintext;
+}
+
+/* ── Composer / input surface ────────────────────────────────────────── */
+[class*="_composerSurface_"] {
+  unicode-bidi: plaintext;
+}
+
+/* ── Thread / conversation turns ─────────────────────────────────────── */
+[class*="userTurn"],
+[class*="assistantTurn"],
+[class*="_curtain_"] {
+  unicode-bidi: plaintext;
+  text-align: start;
+}
+
+/* ── Code blocks – keep LTR to preserve syntax alignment ─────────────── */
+[class*="_markdownRoot_"] pre,
+[class*="_markdownRoot_"] code,
+[class*="_markdownContent_"] pre,
+[class*="_markdownContent_"] code {
+  unicode-bidi: embed;
+  direction: ltr;
+  text-align: left;
+}

@@ -2,6 +2,26 @@
 
 All notable changes to the "Claude Code RTL Support" extension will be documented in this file.
 
+## [0.7.0] - 2026-04-08
+
+### Added
+- **GitHub Copilot Chat support**: RTL injection now works with `github.copilot-chat` using a new Shadow DOM JS injection mode
+- New `injectionMode: 'shadow-dom-js'` strategy that patches `adoptedStyleSheets` on all open shadow roots via a `MutationObserver`
+- New bundled asset `js/rtl-shadow-dom.js` — IIFE that injects `unicode-bidi: plaintext` into every shadow root discovered in the webview
+- `ExtensionTarget.injectionMode` field in `constants.ts` to support multiple injection strategies per extension
+
+### Changed
+- `webviewCssPath` is now optional in `ExtensionTarget` (not needed for shadow-dom-js targets)
+- `cssFilePath` in `ExtensionInfo` is now optional
+- `detectExtensions()` branches on `injectionMode` to handle CSS vs Shadow DOM JS targets separately
+- All commands (`inject`, `remove`, `status`) now route correctly based on the target's injection mode
+- Package description updated to mention Copilot Chat
+
+### Supported Extensions
+- `anthropic.claude-code` — CSS + hash remapping + JS observer
+- `openai.chatgpt` (Codex) — Direct CSS injection with attribute selectors
+- `github.copilot-chat` — Shadow DOM JS injection via `adoptedStyleSheets`
+
 ## [0.6.0] - 2026-03-29
 
 ### Fixed

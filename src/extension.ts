@@ -1,14 +1,14 @@
 import * as vscode from 'vscode';
 import * as fs from 'fs';
-import { detectClaudeCode, hasVersionChanged, saveVersion, extractCurrentHashes, hasRtlVersionChanged, saveRtlVersion } from './detector';
-import { injectRtlCss, removeRtlCss, isAlreadyInjected, injectRtlJs, removeRtlJs, isJsAlreadyInjected } from './injector';
+import { detectExtensions, hasVersionChanged, saveVersion, extractCurrentHashes, hasRtlVersionChanged, saveRtlVersion, ExtensionInfo } from './detector';
+import { injectRtlCss, removeRtlCss, isAlreadyInjected, injectRtlJs, removeRtlJs, isJsAlreadyInjected, injectRtlShadowDomJs } from './injector';
 
 export function activate(context: vscode.ExtensionContext) {
   // Register commands
   context.subscriptions.push(
-    vscode.commands.registerCommand('claudeCodeRtl.inject', () => manualInject(context)),
-    vscode.commands.registerCommand('claudeCodeRtl.remove', () => manualRemove()),
-    vscode.commands.registerCommand('claudeCodeRtl.status', () => checkStatus(context)),
+    vscode.commands.registerCommand('aiRtl.inject', () => manualInject(context)),
+    vscode.commands.registerCommand('aiRtl.remove', () => manualRemove()),
+    vscode.commands.registerCommand('aiRtl.status', () => checkStatus(context)),
   );
 
   // Auto-inject on activation
@@ -23,133 +23,236 @@ export function activate(context: vscode.ExtensionContext) {
 }
 
 /**
- * Automatically inject RTL CSS if needed (new version or not yet injected).
+ * Attempt injection for a single target extension.
+ * Returns true if injection succeeded.
  */
-async function autoInject(context: vscode.ExtensionContext): Promise<void> {
-  const info = detectClaudeCode();
-  if (!info) {
-    return; // Claude Code not installed, silently skip
+async function injectForTarget(
+  info: ExtensionInfo,
+  context: vscode.ExtensionContext,
+  force: boolean
+): Promise<{ injected: boolean; displayName: string; unmatchedCount: number }> {
+  const mode = info.target.injectionMode ?? 'css';
+
+  // ── Shadow DOM JS mode (e.g. Copilot Chat) ──────────────────────────
+  if (mode === 'shadow-dom-js') {
+    if (!info.jsFilePath) {
+      return { injected: false, displayName: info.target.displayName, unmatchedCount: 0 };
+    }
+    const jsContent = fs.existsSync(info.jsFilePath)
+      ? fs.readFileSync(info.jsFilePath, 'utf-8')
+      : '';
+    const jsInjected = isJsAlreadyInjected(jsContent);
+    const versionChanged = hasVersionChanged(context, info);
+    const rtlVersionChanged = hasRtlVersionChanged(context);
+
+    if (!force && jsInjected && !versionChanged && !rtlVersionChanged) {
+      return { injected: false, displayName: info.target.displayName, unmatchedCount: 0 };
+    }
+
+    const result = injectRtlShadowDomJs(info.jsFilePath, context.extensionPath);
+    if (result.success) {
+      await saveVersion(context, info);
+      return { injected: true, displayName: info.target.displayName, unmatchedCount: 0 };
+    } else {
+      vscode.window.showErrorMessage(`${info.target.displayName} RTL: ${result.message}`);
+      return { injected: false, displayName: info.target.displayName, unmatchedCount: 0 };
+    }
+  }
+
+  // ── CSS mode (Claude Code, Codex) ────────────────────────────────────
+  if (!info.cssFilePath) {
+    return { injected: false, displayName: info.target.displayName, unmatchedCount: 0 };
   }
 
   const cssContent = fs.readFileSync(info.cssFilePath, 'utf-8');
   const cssInjected = isAlreadyInjected(cssContent);
-  const jsContent = fs.existsSync(info.jsFilePath) ? fs.readFileSync(info.jsFilePath, 'utf-8') : '';
-  const jsInjected = isJsAlreadyInjected(jsContent);
+  const jsContent = info.jsFilePath && fs.existsSync(info.jsFilePath)
+    ? fs.readFileSync(info.jsFilePath, 'utf-8')
+    : '';
+  const jsInjected = info.jsFilePath ? isJsAlreadyInjected(jsContent) : true;
   const versionChanged = hasVersionChanged(context, info);
   const rtlVersionChanged = hasRtlVersionChanged(context);
 
-  if (cssInjected && jsInjected && !versionChanged && !rtlVersionChanged) {
-    return; // Already injected and both versions unchanged, nothing to do
+  if (!force && cssInjected && jsInjected && !versionChanged && !rtlVersionChanged) {
+    return { injected: false, displayName: info.target.displayName, unmatchedCount: 0 };
   }
 
-  const currentHashes = extractCurrentHashes(cssContent);
-  const cssResult = injectRtlCss(info.cssFilePath, context.extensionPath, currentHashes);
-  const jsResult = injectRtlJs(info.jsFilePath, context.extensionPath);
+  const currentHashes = extractCurrentHashes(cssContent, info.target.classNameBases);
+  const cssResult = injectRtlCss(info.cssFilePath, context.extensionPath, currentHashes, info.target);
+
+  if (info.jsFilePath) {
+    injectRtlJs(info.jsFilePath, context.extensionPath);
+  }
 
   if (cssResult.success) {
     await saveVersion(context, info);
-    await saveRtlVersion(context);
+    return { injected: true, displayName: info.target.displayName, unmatchedCount: cssResult.unmatchedBases.length };
+  } else {
+    vscode.window.showErrorMessage(`${info.target.displayName} RTL: ${cssResult.message}`);
+    return { injected: false, displayName: info.target.displayName, unmatchedCount: 0 };
+  }
+}
 
+/**
+ * Automatically inject RTL CSS for all detected AI extensions if needed.
+ */
+async function autoInject(context: vscode.ExtensionContext): Promise<void> {
+  const extensions = detectExtensions();
+  if (extensions.length === 0) {
+    return;
+  }
+
+  const injectedNames: string[] = [];
+  let totalUnmatched = 0;
+
+  for (const info of extensions) {
+    const result = await injectForTarget(info, context, false);
+    if (result.injected) {
+      injectedNames.push(result.displayName);
+      totalUnmatched += result.unmatchedCount;
+    }
+  }
+
+  if (injectedNames.length > 0) {
+    await saveRtlVersion(context);
+    const nameList = injectedNames.join(', ');
     const reloadAction = 'Reload Now';
-    const jsStatus = jsResult.success ? ' + JS observer' : '';
-    const message = cssResult.unmatchedBases.length > 0
-      ? `Claude Code RTL: CSS${jsStatus} injected (v${info.version}). ${cssResult.unmatchedBases.length} classes not found. Reload to apply.`
-      : `Claude Code RTL: CSS${jsStatus} injected for v${info.version}. Reload to apply.`;
+    const message = totalUnmatched > 0
+      ? `AI Extensions RTL: Injected into ${nameList}. ${totalUnmatched} classes not found. Reload to apply.`
+      : `AI Extensions RTL: Injected into ${nameList}. Reload to apply.`;
 
     const action = await vscode.window.showInformationMessage(message, reloadAction);
     if (action === reloadAction) {
       await vscode.commands.executeCommand('workbench.action.reloadWindow');
     }
-  } else {
-    vscode.window.showErrorMessage(cssResult.message);
   }
 }
 
 /**
- * Manual inject command.
+ * Manual inject command — forces re-injection for all detected extensions.
  */
 async function manualInject(context: vscode.ExtensionContext): Promise<void> {
-  const info = detectClaudeCode();
-  if (!info) {
-    vscode.window.showWarningMessage('Claude Code extension not found. Please install it first.');
+  const extensions = detectExtensions();
+  if (extensions.length === 0) {
+    vscode.window.showWarningMessage(
+      'AI Extensions RTL: No supported AI extensions found. Install Claude Code or Codex first.'
+    );
     return;
   }
 
-  const cssContent = fs.readFileSync(info.cssFilePath, 'utf-8');
-  const currentHashes = extractCurrentHashes(cssContent);
-  const cssResult = injectRtlCss(info.cssFilePath, context.extensionPath, currentHashes);
-  const jsResult = injectRtlJs(info.jsFilePath, context.extensionPath);
+  const injectedNames: string[] = [];
+  let totalUnmatched = 0;
 
-  if (cssResult.success) {
-    await saveVersion(context, info);
+  for (const info of extensions) {
+    const result = await injectForTarget(info, context, true);
+    if (result.injected) {
+      injectedNames.push(result.displayName);
+      totalUnmatched += result.unmatchedCount;
+    }
+  }
+
+  if (injectedNames.length > 0) {
     await saveRtlVersion(context);
-
-    const jsStatus = jsResult.success ? ' + JS observer' : '';
+    const nameList = injectedNames.join(', ');
     const reloadAction = 'Reload Now';
-    const action = await vscode.window.showInformationMessage(
-      `${cssResult.message}${jsStatus} Reload to apply changes.`,
-      reloadAction,
-    );
+    const message = totalUnmatched > 0
+      ? `AI Extensions RTL: Injected into ${nameList}. ${totalUnmatched} classes unmatched. Reload to apply.`
+      : `AI Extensions RTL: Injected into ${nameList}. Reload to apply.`;
+
+    const action = await vscode.window.showInformationMessage(message, reloadAction);
     if (action === reloadAction) {
       await vscode.commands.executeCommand('workbench.action.reloadWindow');
     }
-  } else {
-    vscode.window.showErrorMessage(cssResult.message);
   }
 }
 
 /**
- * Manual remove command.
+ * Manual remove command — cleans RTL injection from all detected extensions.
  */
 async function manualRemove(): Promise<void> {
-  const info = detectClaudeCode();
-  if (!info) {
-    vscode.window.showWarningMessage('Claude Code extension not found.');
+  const extensions = detectExtensions();
+  if (extensions.length === 0) {
+    vscode.window.showWarningMessage('AI Extensions RTL: No supported AI extensions found.');
     return;
   }
 
-  const cssResult = removeRtlCss(info.cssFilePath);
-  const jsResult = removeRtlJs(info.jsFilePath);
+  let anySuccess = false;
 
-  if (cssResult.success || jsResult.success) {
+  for (const info of extensions) {
+    const mode = info.target.injectionMode ?? 'css';
+    if (mode === 'shadow-dom-js') {
+      if (info.jsFilePath) {
+        const result = removeRtlJs(info.jsFilePath);
+        if (result.success) { anySuccess = true; }
+      }
+    } else {
+      if (info.cssFilePath) {
+        const cssResult = removeRtlCss(info.cssFilePath);
+        if (cssResult.success) { anySuccess = true; }
+      }
+      if (info.jsFilePath) {
+        removeRtlJs(info.jsFilePath);
+      }
+    }
+  }
+
+  if (anySuccess) {
     const reloadAction = 'Reload Now';
     const action = await vscode.window.showInformationMessage(
-      `RTL CSS and JS removed successfully. Reload to apply changes.`,
+      'AI Extensions RTL: Removed RTL injection. Reload to apply changes.',
       reloadAction,
     );
     if (action === reloadAction) {
       await vscode.commands.executeCommand('workbench.action.reloadWindow');
     }
   } else {
-    vscode.window.showWarningMessage('No injected RTL CSS or JS found.');
+    vscode.window.showWarningMessage('AI Extensions RTL: No injected RTL CSS found.');
   }
 }
 
 /**
- * Check injection status command.
+ * Status command — shows injection state for all detected extensions.
  */
 function checkStatus(context: vscode.ExtensionContext): void {
-  const info = detectClaudeCode();
-  if (!info) {
-    vscode.window.showInformationMessage('Claude Code RTL Status: Claude Code extension not found.');
+  const extensions = detectExtensions();
+  if (extensions.length === 0) {
+    vscode.window.showInformationMessage('AI Extensions RTL: No supported AI extensions found.');
     return;
   }
 
-  const cssContent = fs.readFileSync(info.cssFilePath, 'utf-8');
-  const cssInjected = isAlreadyInjected(cssContent);
-  const jsContent = fs.existsSync(info.jsFilePath) ? fs.readFileSync(info.jsFilePath, 'utf-8') : '';
-  const jsInjected = isJsAlreadyInjected(jsContent);
-  const versionChanged = hasVersionChanged(context, info);
+  const lines: string[] = [];
 
-  const cssStatus = cssInjected ? 'CSS ✓' : 'CSS ✗';
-  const jsStatus = jsInjected ? 'JS ✓' : 'JS ✗';
-  const versionNote = versionChanged ? ' (version changed since last injection!)' : '';
+  for (const info of extensions) {
+    const mode = info.target.injectionMode ?? 'css';
+    const versionChanged = hasVersionChanged(context, info);
+    const versionNote = versionChanged ? ' ⚠ version changed' : '';
 
-  vscode.window.showInformationMessage(
-    `Claude Code RTL Status: ${cssStatus}, ${jsStatus}. Claude Code v${info.version}.${versionNote}`
-  );
+    if (mode === 'shadow-dom-js') {
+      const jsContent = info.jsFilePath && fs.existsSync(info.jsFilePath)
+        ? fs.readFileSync(info.jsFilePath, 'utf-8')
+        : '';
+      const jsInjected = isJsAlreadyInjected(jsContent);
+      lines.push(`${info.target.displayName} v${info.version}: Shadow DOM JS ${jsInjected ? '✓' : '✗'}${versionNote}`);
+    } else {
+      const cssContent = info.cssFilePath ? fs.readFileSync(info.cssFilePath, 'utf-8') : '';
+      const cssInjected = info.cssFilePath ? isAlreadyInjected(cssContent) : false;
+      const jsContent = info.jsFilePath && fs.existsSync(info.jsFilePath)
+        ? fs.readFileSync(info.jsFilePath, 'utf-8')
+        : '';
+      const jsInjected = info.jsFilePath ? isJsAlreadyInjected(jsContent) : null;
+
+      const cssStatus = cssInjected ? 'CSS ✓' : 'CSS ✗';
+      const jsStatus = jsInjected !== null ? (jsInjected ? 'JS ✓' : 'JS ✗') : '';
+      const parts = [cssStatus, jsStatus].filter(Boolean).join(', ');
+
+      lines.push(`${info.target.displayName} v${info.version}: ${parts}${versionNote}`);
+    }
+  }
+
+  vscode.window.showInformationMessage(`AI Extensions RTL: ${lines.join(' | ')}`);
 }
 
 export function deactivate() {
   // Nothing to clean up
 }
+

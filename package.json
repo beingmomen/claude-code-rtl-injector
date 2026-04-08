@@ -1,8 +1,8 @@
 {
-  "name": "claude-code-rtl-injector",
-  "displayName": "Claude Code RTL Support",
-  "description": "Automatically injects RTL/Arabic CSS into Claude Code's webview for proper Arabic text rendering",
-  "version": "0.6.0",
+  "name": "ai-extensions-rtl-support",
+  "displayName": "AI Extensions RTL Support",
+  "description": "Automatically injects RTL/Arabic CSS into AI extension webviews (Claude Code, Codex, Copilot Chat) for proper Arabic text rendering",
+  "version": "0.7.0",
   "publisher": "beingmomen",
   "license": "MIT",
   "icon": "images/icon.png",
@@ -26,8 +26,14 @@
     "right-to-left",
     "claude",
     "claude-code",
+    "codex",
+    "openai",
+    "chatgpt",
     "bidirectional",
-    "bidi"
+    "bidi",
+    "copilot",
+    "copilot-chat",
+    "github-copilot"
   ],
   "activationEvents": [
     "onStartupFinished"
@@ -36,16 +42,16 @@
   "contributes": {
     "commands": [
       {
-        "command": "claudeCodeRtl.inject",
-        "title": "Claude Code RTL: Inject CSS Now"
+        "command": "aiRtl.inject",
+        "title": "AI Extensions RTL: Inject CSS Now"
       },
       {
-        "command": "claudeCodeRtl.remove",
-        "title": "Claude Code RTL: Remove Injected CSS"
+        "command": "aiRtl.remove",
+        "title": "AI Extensions RTL: Remove Injected CSS"
       },
       {
-        "command": "claudeCodeRtl.status",
-        "title": "Claude Code RTL: Check Status"
+        "command": "aiRtl.status",
+        "title": "AI Extensions RTL: Check Status"
       }
     ]
   },

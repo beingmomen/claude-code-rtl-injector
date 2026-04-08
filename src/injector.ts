@@ -1,6 +1,6 @@
 import * as fs from 'fs';
 import * as path from 'path';
-import { MARKER_START, MARKER_END, JS_MARKER_START, JS_MARKER_END, OLD_MANUAL_MARKER, CLASS_NAME_BASES } from './constants';
+import { MARKER_START, MARKER_END, JS_MARKER_START, JS_MARKER_END, OLD_MANUAL_MARKER, CLASS_NAME_BASES, ExtensionTarget } from './constants';
 import { HashMap } from './detector';
 
 export interface InjectResult {
@@ -11,10 +11,10 @@ export interface InjectResult {
 }
 
 /**
- * Read the RTL CSS template bundled with this extension.
+ * Read a CSS template file bundled with this extension.
  */
-export function readRtlTemplate(extensionPath: string): string {
-  const templatePath = path.join(extensionPath, 'css', 'rtl-support.css');
+export function readRtlTemplate(extensionPath: string, filename = 'rtl-support.css'): string {
+  const templatePath = path.join(extensionPath, 'css', filename);
   return fs.readFileSync(templatePath, 'utf-8');
 }
 
@@ -22,9 +22,9 @@ export function readRtlTemplate(extensionPath: string): string {
  * Extract hashes used in the RTL CSS template itself.
  * Returns a map of baseName -> hash found in the template.
  */
-function extractTemplateHashes(templateCss: string): HashMap {
+function extractTemplateHashes(templateCss: string, classNameBases: string[] = CLASS_NAME_BASES): HashMap {
   const hashMap: HashMap = {};
-  for (const baseName of CLASS_NAME_BASES) {
+  for (const baseName of classNameBases) {
     const regex = new RegExp(`\\.${baseName}_([a-zA-Z0-9_-]+)`, 'g');
     const match = regex.exec(templateCss);
     if (match) {
@@ -35,19 +35,21 @@ function extractTemplateHashes(templateCss: string): HashMap {
 }
 
 /**
- * Remap hashes in the RTL CSS template to match current Claude Code hashes.
+ * Remap hashes in the RTL CSS template to match current extension's CSS hashes.
  * Returns the remapped CSS and statistics.
+ * @param classNameBases - Class name bases to remap. Defaults to Claude Code bases.
  */
 export function remapHashes(
   templateCss: string,
-  currentHashes: HashMap
+  currentHashes: HashMap,
+  classNameBases: string[] = CLASS_NAME_BASES
 ): { css: string; remapped: number; unmatched: string[] } {
-  const templateHashes = extractTemplateHashes(templateCss);
+  const templateHashes = extractTemplateHashes(templateCss, classNameBases);
   let css = templateCss;
   let remapped = 0;
   const unmatched: string[] = [];
 
-  for (const baseName of CLASS_NAME_BASES) {
+  for (const baseName of classNameBases) {
     const templateHash = templateHashes[baseName];
     const currentHash = currentHashes[baseName];
 
@@ -120,12 +122,13 @@ function ensureBackup(cssFilePath: string): void {
 }
 
 /**
- * Inject RTL CSS into Claude Code's webview CSS file.
+ * Inject RTL CSS into a supported AI extension's webview CSS file.
  */
 export function injectRtlCss(
   cssFilePath: string,
   extensionPath: string,
-  currentHashes: HashMap
+  currentHashes: HashMap,
+  target?: ExtensionTarget
 ): InjectResult {
   try {
     // Backup original
@@ -142,17 +145,31 @@ export function injectRtlCss(
     // Remove old manual injection if present
     cssContent = removeOldManualInjection(cssContent);
 
-    // Read and remap RTL template
-    const template = readRtlTemplate(extensionPath);
-    const { css: remappedCss, remapped, unmatched } = remapHashes(template, currentHashes);
+    // Read template and optionally remap hashes
+    const tplFile = target?.cssTplFile ?? 'rtl-support.css';
+    const template = readRtlTemplate(extensionPath, tplFile);
+    const classNameBases = target?.classNameBases ?? CLASS_NAME_BASES;
+
+    let remappedCss: string;
+    let remapped = 0;
+    let unmatched: string[] = [];
+
+    if (classNameBases.length === 0) {
+      // No hash remapping needed (e.g. Codex uses attribute selectors)
+      remappedCss = template;
+    } else {
+      ({ css: remappedCss, remapped, unmatched } = remapHashes(template, currentHashes, classNameBases));
+    }
 
     // Build injection block
+    const targetName = target?.displayName ?? 'AI extension';
     const injectionBlock = [
       '',
       '',
       MARKER_START,
-      `/* Injected by Claude Code RTL Support extension */`,
+      `/* Injected by AI Extensions RTL Support (target: ${targetName}) */`,
       `/* Do not edit manually - this block is managed automatically */`,
+
       '',
       remappedCss,
       '',
@@ -313,5 +330,58 @@ export function removeRtlJs(jsFilePath: string): { success: boolean; message: st
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);
     return { success: false, message: `Failed to remove RTL JS: ${msg}` };
+  }
+}
+
+// ─── Shadow DOM JS Injection (e.g. Copilot Chat) ─────────────────────
+
+/**
+ * Read the RTL Shadow DOM JS template bundled with this extension.
+ */
+function readShadowDomJsTemplate(extensionPath: string): string {
+  const templatePath = path.join(extensionPath, 'js', 'rtl-shadow-dom.js');
+  return fs.readFileSync(templatePath, 'utf-8');
+}
+
+/**
+ * Inject RTL CSS into Shadow DOM roots by appending a JS patch to a webview
+ * bundle (e.g. Copilot Chat's suggestionsPanelWebview.js).
+ * Uses adoptedStyleSheets on each discovered open shadow root.
+ */
+export function injectRtlShadowDomJs(
+  jsFilePath: string,
+  extensionPath: string
+): { success: boolean; message: string } {
+  try {
+    if (!fs.existsSync(jsFilePath)) {
+      return { success: false, message: 'Webview JS file not found.' };
+    }
+
+    const backupPath = jsFilePath + '.rtl-backup';
+    if (!fs.existsSync(backupPath)) {
+      fs.copyFileSync(jsFilePath, backupPath);
+    }
+
+    let jsContent = fs.readFileSync(jsFilePath, 'utf-8');
+
+    if (isJsAlreadyInjected(jsContent)) {
+      jsContent = removeInjectedJsBlock(jsContent);
+    }
+
+    const template = readShadowDomJsTemplate(extensionPath);
+    const injectionBlock = [
+      '',
+      JS_MARKER_START,
+      template,
+      JS_MARKER_END,
+    ].join('\n');
+
+    jsContent = jsContent.trimEnd() + '\n' + injectionBlock + '\n';
+    fs.writeFileSync(jsFilePath, jsContent, 'utf-8');
+
+    return { success: true, message: 'RTL Shadow DOM JS injected successfully.' };
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    return { success: false, message: `Failed to inject Shadow DOM JS: ${msg}` };
   }
 }
