@@ -110,6 +110,15 @@
   text-align: start;
 }
 
+/* Plan mode milestone panel */
+.milestoneList_UxGN1Q,
+.milestoneRow_UxGN1Q,
+.milestoneText_UxGN1Q,
+.milestoneTextBold_UxGN1Q {
+  unicode-bidi: plaintext;
+  text-align: start;
+}
+
 /* Keep code blocks always LTR */
 .root_-a7MRw pre,
 .root_-a7MRw code,

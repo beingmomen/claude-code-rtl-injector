@@ -40,4 +40,9 @@ export const CLASS_NAME_BASES = [
   'toolBodyRowContent',
   'mentionMirror',
   'messageInputContainer',
+  // Plan mode milestone panel
+  'milestoneList',
+  'milestoneRow',
+  'milestoneText',
+  'milestoneTextBold',
 ];
