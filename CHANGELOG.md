@@ -2,6 +2,15 @@
 
 All notable changes to the "Claude Code RTL Support" extension will be documented in this file.
 
+## [0.6.1] - 2026-10-25
+
+### Fixed
+- **List markers on the wrong side in Arabic assistant replies**: Bullets (`•`) and numbers (`1.` `2.`) were drawn on the left while the Arabic item text was right-aligned
+- Root cause: `unicode-bidi: plaintext` on `li` fixes each line's text direction, but the `ul`/`ol` containers kept the inherited LTR direction, so marker placement stayed left
+
+### Changed
+- JS observer now also sets `dir="auto"` on `ul`/`ol` inside the assistant markdown root (matched by the `root_` class prefix, so it survives Claude Code hash changes) — Arabic lists get markers on the right, English lists stay on the left, nested lists and streamed replies included
+
 ## [0.6.0] - 2026-03-29
 
 ### Fixed

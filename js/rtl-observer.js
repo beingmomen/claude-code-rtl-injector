@@ -3,7 +3,10 @@
   var INPUT_SEL = '[class*="messageInput_"]:not([class*="messageInputContainer_"])';
   var CONTAINER_SEL = '[class*="messageInputContainer_"]';
   var MIRROR_SEL = '[class*="mentionMirror_"]';
-  var ALL_SEL = MSG_SEL + ', ' + INPUT_SEL + ', ' + CONTAINER_SEL + ', ' + MIRROR_SEL;
+  // Lists inside the assistant markdown root (.root_<hash>). The list container
+  // needs its own dir so bullet/number markers follow the content language.
+  var LIST_SEL = '[class^="root_"] ul, [class*=" root_"] ul, [class^="root_"] ol, [class*=" root_"] ol';
+  var ALL_SEL = MSG_SEL + ', ' + INPUT_SEL + ', ' + CONTAINER_SEL + ', ' + MIRROR_SEL + ', ' + LIST_SEL;
 
   function setDirAuto(el) {
     if (el && !el.getAttribute('dir')) {

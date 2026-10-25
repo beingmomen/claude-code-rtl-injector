@@ -62,7 +62,7 @@ Claude Code extension من Anthropic لا تدعم اللغة العربية ب�
 
 **الطريقة A: من سطر الأوامر**
 ```bash
-code --install-extension claude-code-rtl-injector-0.6.0.vsix
+code --install-extension claude-code-rtl-injector-0.6.1.vsix
 ```
 
 **الطريقة B: من داخل VS Code**
@@ -92,7 +92,7 @@ npm run compile
 npm run package
 ```
 
-هيتعمل ملف `claude-code-rtl-injector-0.6.0.vsix` في نفس المجلد. ثبته بنفس الخطوات في الطريقة 1.
+هيتعمل ملف `claude-code-rtl-injector-0.6.1.vsix` في نفس المجلد. ثبته بنفس الخطوات في الطريقة 1.
 
 ---
 
